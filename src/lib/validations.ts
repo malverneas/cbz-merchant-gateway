@@ -6,33 +6,32 @@ export const businessInfoSchema = z.object({
     .trim()
     .min(1, 'Business name is required')
     .max(100, 'Business name must be less than 100 characters'),
-  tradingName: z
+  natureOfBusiness: z
     .string()
     .trim()
-    .max(100, 'Trading name must be less than 100 characters')
-    .optional()
-    .or(z.literal('')),
-  businessType: z
+    .min(1, 'Nature of business is required')
+    .max(100, 'Nature of business must be less than 100 characters'),
+  accountNumber: z
     .string()
     .trim()
-    .min(1, 'Business type is required')
-    .max(50, 'Business type must be less than 50 characters'),
-  registrationNumber: z
+    .min(1, 'Account number is required')
+    .max(50, 'Account number must be less than 50 characters'),
+  idNumber: z
     .string()
     .trim()
-    .min(1, 'Registration number is required')
-    .max(50, 'Registration number must be less than 50 characters'),
-  taxId: z
-    .string()
-    .trim()
-    .max(50, 'Tax ID must be less than 50 characters')
-    .optional()
-    .or(z.literal('')),
+    .min(1, 'ID number is required')
+    .max(50, 'ID number must be less than 50 characters'),
   businessAddress: z
     .string()
     .trim()
     .min(1, 'Business address is required')
     .max(200, 'Address must be less than 200 characters'),
+  websiteUrl: z
+    .string()
+    .trim()
+    .max(200, 'Website URL must be less than 200 characters')
+    .optional()
+    .or(z.literal('')),
   city: z
     .string()
     .trim()
@@ -41,34 +40,15 @@ export const businessInfoSchema = z.object({
   province: z
     .string()
     .trim()
-    .max(50, 'Province must be less than 50 characters')
-    .optional()
-    .or(z.literal('')),
-  postalCode: z
-    .string()
-    .trim()
-    .max(20, 'Postal code must be less than 20 characters')
-    .optional()
-    .or(z.literal('')),
+    .min(1, 'Province is required')
+    .max(50, 'Province must be less than 50 characters'),
   country: z.string().default('Zimbabwe'),
-  websiteUrl: z
-    .string()
-    .trim()
-    .max(200, 'Website URL must be less than 200 characters')
-    .optional()
-    .or(z.literal('')),
-  expectedMonthlyVolume: z
-    .string()
-    .trim()
-    .max(50, 'Expected volume must be less than 50 characters')
-    .optional()
-    .or(z.literal('')),
-  businessDescription: z
-    .string()
-    .trim()
-    .max(500, 'Description must be less than 500 characters')
-    .optional()
-    .or(z.literal('')),
+});
+
+export const serviceTypeSchema = z.object({
+  serviceTypes: z
+    .array(z.string())
+    .min(1, 'Please select at least one service type'),
 });
 
 export const contactInfoSchema = z.object({
@@ -90,21 +70,26 @@ export const contactInfoSchema = z.object({
     .max(30, 'Phone number must be less than 30 characters'),
 });
 
-export const applicationFormSchema = businessInfoSchema.merge(contactInfoSchema);
+export const applicationFormSchema = businessInfoSchema.merge(serviceTypeSchema).merge(contactInfoSchema);
 
 export type BusinessInfoFormData = z.infer<typeof businessInfoSchema>;
+export type ServiceTypeFormData = z.infer<typeof serviceTypeSchema>;
 export type ContactInfoFormData = z.infer<typeof contactInfoSchema>;
 export type ApplicationFormData = z.infer<typeof applicationFormSchema>;
 
 // Validate a specific step
 export const validateStep = (
-  step: 'business' | 'contact',
+  step: 'business' | 'service' | 'contact',
   data: Partial<ApplicationFormData>
 ): { valid: boolean; errors: Record<string, string> } => {
-  const schema = step === 'business' ? businessInfoSchema : contactInfoSchema;
-  
+  const schema = step === 'business'
+    ? businessInfoSchema
+    : step === 'service'
+      ? serviceTypeSchema
+      : contactInfoSchema;
+
   const result = schema.safeParse(data);
-  
+
   if (result.success) {
     return { valid: true, errors: {} };
   }

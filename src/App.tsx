@@ -12,6 +12,8 @@ import ApplicationDetail from "./pages/ApplicationDetail";
 import MerchantApplications from "./pages/MerchantApplications";
 import OnboardingReview from "./pages/OnboardingReview";
 import ComplianceReview from "./pages/ComplianceReview";
+import AdminUserManagement from "./pages/AdminUserManagement";
+import AdminAllApplications from "./pages/AdminAllApplications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,10 +30,13 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/apply" element={<ApplicationForm />} />
+            <Route path="/apply/:id" element={<ApplicationForm />} />
             <Route path="/applications" element={<MerchantApplications />} />
             <Route path="/application/:id" element={<ApplicationDetail />} />
             <Route path="/onboarding/review" element={<OnboardingReview />} />
             <Route path="/compliance/review" element={<ComplianceReview />} />
+            <Route path="/admin/users" element={<AdminUserManagement />} />
+            <Route path="/admin/applications" element={<AdminAllApplications />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

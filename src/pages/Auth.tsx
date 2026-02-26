@@ -6,60 +6,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  ArrowLeft, 
-  Mail, 
-  Lock, 
-  User, 
+import {
+  ArrowLeft,
+  Mail,
+  Lock,
+  User,
   Building2,
-  ClipboardCheck,
-  Shield,
-  Settings
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 type AuthMode = 'login' | 'register';
-
-const roleOptions: { value: UserRole; label: string; icon: React.ElementType; description: string }[] = [
-  { 
-    value: 'merchant', 
-    label: 'Merchant', 
-    icon: Building2, 
-    description: 'Apply for e-commerce services' 
-  },
-  { 
-    value: 'onboarding_officer', 
-    label: 'Onboarding Officer', 
-    icon: ClipboardCheck, 
-    description: 'Review merchant applications' 
-  },
-  { 
-    value: 'compliance_officer', 
-    label: 'Compliance Officer', 
-    icon: Shield, 
-    description: 'Perform compliance reviews' 
-  },
-  { 
-    value: 'admin', 
-    label: 'Administrator', 
-    icon: Settings, 
-    description: 'Full system access' 
-  },
-];
 
 const Auth: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, login, register, isLoading } = useAuth();
   const { toast } = useToast();
-  
+
   const [mode, setMode] = useState<AuthMode>(searchParams.get('mode') === 'register' ? 'register' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('merchant');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -93,11 +60,12 @@ const Auth: React.FC = () => {
         setError('Please enter your name');
         return;
       }
-      const result = await register(email, password, name, selectedRole);
+      // Only merchants can self-register. Staff accounts are created by the admin.
+      const result = await register(email, password, name, 'merchant');
       if (result.success) {
         toast({
           title: 'Account created!',
-          description: 'Welcome to CBZ E-Commerce Services.',
+          description: 'Welcome to CBZ E-Commerce Services. You can now apply for merchant services.',
         });
         navigate('/dashboard');
       } else {
@@ -128,12 +96,12 @@ const Auth: React.FC = () => {
             {mode === 'login' ? 'Welcome Back' : 'Get Started'}
           </h2>
           <p className="text-primary-foreground/70 text-lg max-w-md">
-            {mode === 'login' 
+            {mode === 'login'
               ? 'Sign in to manage your merchant applications and track your approval status.'
-              : 'Create an account to apply for merchant services and start accepting online payments.'}
+              : 'Create a merchant account to apply for e-commerce services and start accepting online payments.'}
           </p>
         </div>
-        
+
         <div className="bg-primary-foreground/10 backdrop-blur rounded-xl p-6">
           <h3 className="text-primary-foreground font-medium mb-3">Secure & Reliable</h3>
           <p className="text-primary-foreground/70 text-sm">
@@ -156,63 +124,32 @@ const Auth: React.FC = () => {
           <Card className="border-0 shadow-lg">
             <CardHeader className="space-y-1 pb-4">
               <CardTitle className="text-2xl">
-                {mode === 'login' ? 'Sign In' : 'Create Account'}
+                {mode === 'login' ? 'Sign In' : 'Merchant Registration'}
               </CardTitle>
               <CardDescription>
-                {mode === 'login' 
+                {mode === 'login'
                   ? 'Enter your credentials to access your account'
-                  : 'Fill in your details to get started'}
+                  : 'Create your merchant account to get started'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'register' && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                        <Input
-                          id="name"
-                          type="text"
-                          placeholder="John Doe"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="John Doe"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="pl-10"
+                        required
+                      />
                     </div>
-
-                    <div className="space-y-2">
-                      <Label>Account Type</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {roleOptions.map((role) => {
-                          const Icon = role.icon;
-                          return (
-                            <button
-                              key={role.value}
-                              type="button"
-                              onClick={() => setSelectedRole(role.value)}
-                              className={cn(
-                                'flex flex-col items-start p-3 rounded-lg border-2 transition-all text-left',
-                                selectedRole === role.value
-                                  ? 'border-primary bg-primary/5'
-                                  : 'border-border hover:border-primary/50'
-                              )}
-                            >
-                              <Icon size={18} className={cn(
-                                'mb-1',
-                                selectedRole === role.value ? 'text-primary' : 'text-muted-foreground'
-                              )} />
-                              <span className="text-sm font-medium">{role.label}</span>
-                              <span className="text-xs text-muted-foreground line-clamp-1">{role.description}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </>
+                  </div>
                 )}
 
                 <div className="space-y-2">
@@ -253,20 +190,20 @@ const Auth: React.FC = () => {
                   </div>
                 )}
 
-                <Button 
-                  type="submit" 
-                  variant="hero" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  variant="hero"
+                  className="w-full"
                   size="lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+                  {isLoading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Merchant Account'}
                 </Button>
               </form>
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground">
-                  {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
+                  {mode === 'login' ? "Don't have a merchant account?" : 'Already have an account?'}
                   <button
                     type="button"
                     onClick={() => setMode(mode === 'login' ? 'register' : 'login')}

@@ -11,11 +11,11 @@ import { useApplication, useUpdateApplicationStatus } from '@/hooks/useApplicati
 import { useApplicationDocuments, useDocumentUrl } from '@/hooks/useDocuments';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { 
-  ArrowLeft, 
-  Building2, 
-  User, 
-  FileText, 
+import {
+  ArrowLeft,
+  Building2,
+  User,
+  FileText,
   Calendar,
   MessageSquare,
   Send,
@@ -23,19 +23,21 @@ import {
   XCircle,
   AlertTriangle,
   Download,
-  ExternalLink
+  ExternalLink,
+  Edit,
+  ShoppingCart
 } from 'lucide-react';
 
 // Document download component
 const DocumentItem: React.FC<{ doc: { id: string; name: string; file_path: string; uploaded_at: string } }> = ({ doc }) => {
   const { data: signedUrl, isLoading } = useDocumentUrl(doc.file_path);
-  
+
   const handleDownload = () => {
     if (signedUrl) {
       window.open(signedUrl, '_blank');
     }
   };
-  
+
   return (
     <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
       <div className="flex items-center gap-3">
@@ -66,13 +68,13 @@ const ApplicationDetail: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [comment, setComment] = useState('');
-  
+
   const { data: application, isLoading } = useApplication(id);
   const { data: documents, isLoading: docsLoading } = useApplicationDocuments(id);
   const updateStatus = useUpdateApplicationStatus();
-  
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -88,7 +90,7 @@ const ApplicationDetail: React.FC = () => {
       </DashboardLayout>
     );
   }
-  
+
   if (!application) {
     return (
       <DashboardLayout>
@@ -110,7 +112,7 @@ const ApplicationDetail: React.FC = () => {
   const handleStatusChange = async (newStatus: 'under_review' | 'compliance_review' | 'approved' | 'rejected' | 'additional_documents_requested') => {
     try {
       await updateStatus.mutateAsync({ id: application.id, status: newStatus });
-      
+
       const statusLabels: Record<string, string> = {
         under_review: 'marked as Under Review',
         compliance_review: 'forwarded to Compliance',
@@ -118,7 +120,7 @@ const ApplicationDetail: React.FC = () => {
         rejected: 'Rejected',
         additional_documents_requested: 'marked for Additional Documents',
       };
-      
+
       toast({
         title: 'Status Updated',
         description: `Application has been ${statusLabels[newStatus]}.`,
@@ -134,7 +136,7 @@ const ApplicationDetail: React.FC = () => {
 
   const handleAddComment = () => {
     if (!comment.trim()) return;
-    
+
     toast({
       title: 'Comment Added',
       description: 'Your comment has been added to the application.',
@@ -158,12 +160,18 @@ const ApplicationDetail: React.FC = () => {
                 <StatusBadge status={application.status} />
               </div>
               <p className="text-muted-foreground">
-                {application.submitted_at 
+                {application.submitted_at
                   ? `Submitted on ${format(new Date(application.submitted_at), 'MMMM d, yyyy')}`
                   : `Created on ${format(new Date(application.created_at), 'MMMM d, yyyy')}`
                 }
               </p>
             </div>
+            {isMerchant && application.status === 'additional_documents_requested' && (
+              <Button variant="hero" onClick={() => navigate(`/apply/${application.id}`)}>
+                <Edit size={16} className="mr-2" />
+                Edit & Re-submit
+              </Button>
+            )}
           </div>
         </div>
 
@@ -182,32 +190,23 @@ const ApplicationDetail: React.FC = () => {
                   <p className="text-sm text-muted-foreground">Business Name</p>
                   <p className="font-medium text-foreground">{application.business_name}</p>
                 </div>
-                {application.trading_name && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Trading Name</p>
-                    <p className="font-medium text-foreground">{application.trading_name}</p>
-                  </div>
-                )}
                 <div>
-                  <p className="text-sm text-muted-foreground">Business Type</p>
-                  <p className="font-medium text-foreground">{application.business_type}</p>
+                  <p className="text-sm text-muted-foreground">Nature of Business</p>
+                  <p className="font-medium text-foreground">{(application as any).nature_of_business || application.business_type}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Registration Number</p>
-                  <p className="font-medium text-foreground">{application.registration_number}</p>
+                  <p className="text-sm text-muted-foreground">Account Number</p>
+                  <p className="font-medium text-foreground">{(application as any).account_number || '-'}</p>
                 </div>
-                {application.tax_id && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tax ID</p>
-                    <p className="font-medium text-foreground">{application.tax_id}</p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-sm text-muted-foreground">ID Number (Proprietor/Manager)</p>
+                  <p className="font-medium text-foreground">{(application as any).id_number || application.registration_number}</p>
+                </div>
                 <div className="md:col-span-2">
                   <p className="text-sm text-muted-foreground">Address</p>
                   <p className="font-medium text-foreground">
                     {application.business_address}, {application.city}
-                    {application.province && `, ${application.province}`}
-                    {application.postal_code && ` ${application.postal_code}`}, {application.country}
+                    {application.province && `, ${application.province}`}, {application.country}
                   </p>
                 </div>
                 {application.website_url && (
@@ -216,21 +215,33 @@ const ApplicationDetail: React.FC = () => {
                     <p className="font-medium text-foreground">{application.website_url}</p>
                   </div>
                 )}
-                {application.expected_monthly_volume && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Expected Monthly Volume</p>
-                    <p className="font-medium text-foreground">{application.expected_monthly_volume}</p>
-                  </div>
-                )}
-                {application.business_description && (
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-muted-foreground">Business Description</p>
-                    <p className="font-medium text-foreground">{application.business_description}</p>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Service Types */}
+          {(application as any).service_types && (application as any).service_types.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingCart size={20} className="text-primary" />
+                  Service Types
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {((application as any).service_types as string[]).map((type: string) => {
+                    const labels: Record<string, string> = { paylink: 'Paylink', payment_gateway: 'Payment Gateway', zikimall: 'Zikimall' };
+                    return (
+                      <span key={type} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                        {labels[type] || type}
+                      </span>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Contact Information */}
           <Card>
@@ -377,16 +388,16 @@ const ApplicationDetail: React.FC = () => {
                 <div className="flex flex-wrap gap-3">
                   {canReview && (application.status === 'submitted' || application.status === 'under_review') && (
                     <>
-                      <Button 
-                        variant="default" 
+                      <Button
+                        variant="default"
                         onClick={() => handleStatusChange('compliance_review')}
                         disabled={updateStatus.isPending}
                       >
                         <Send size={16} className="mr-2" />
                         Forward to Compliance
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={() => handleStatusChange('additional_documents_requested')}
                         disabled={updateStatus.isPending}
                       >
@@ -395,28 +406,28 @@ const ApplicationDetail: React.FC = () => {
                       </Button>
                     </>
                   )}
-                  
+
                   {canApprove && application.status === 'compliance_review' && (
                     <>
-                      <Button 
+                      <Button
                         variant="default"
-                        className="bg-success hover:bg-success/90" 
+                        className="bg-success hover:bg-success/90"
                         onClick={() => handleStatusChange('approved')}
                         disabled={updateStatus.isPending}
                       >
                         <CheckCircle size={16} className="mr-2" />
                         Approve Application
                       </Button>
-                      <Button 
-                        variant="destructive" 
+                      <Button
+                        variant="destructive"
                         onClick={() => handleStatusChange('rejected')}
                         disabled={updateStatus.isPending}
                       >
                         <XCircle size={16} className="mr-2" />
                         Reject Application
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={() => handleStatusChange('additional_documents_requested')}
                         disabled={updateStatus.isPending}
                       >

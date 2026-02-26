@@ -83,3 +83,27 @@ export const sendApplicationStatusEmail = async (
 
   return sendEmail(templateParams);
 };
+
+/**
+ * Sends login credentials to a newly created staff member
+ */
+export const sendNewUserCredentialsEmail = async (
+  email: string,
+  name: string,
+  password: string,
+  roleName: string
+) => {
+  const loginUrl = `${window.location.origin}/auth`;
+
+  const templateParams = {
+    to_email: email,
+    merchant_name: name,
+    business_name: 'CBZ Bank E-Commerce Services',
+    status: 'Account Created',
+    dashboard_url: loginUrl,
+    time: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+    message: `Welcome to CBZ Bank E-Commerce Services! Your ${roleName} account has been created.\n\nYour login credentials:\nEmail: ${email}\nPassword: ${password}\n\nPlease sign in at ${loginUrl} and change your password after your first login.`,
+  };
+
+  return sendEmail(templateParams);
+};
