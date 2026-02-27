@@ -7,15 +7,47 @@ import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { UserRole } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
   Mail,
   Lock,
   User,
   Building2,
+  ClipboardCheck,
+  Shield,
+  Settings
 } from 'lucide-react';
 
 type AuthMode = 'login' | 'register';
+
+const roleOptions: { value: UserRole; label: string; icon: React.ElementType; description: string }[] = [
+  {
+    value: 'merchant',
+    label: 'Merchant',
+    icon: Building2,
+    description: 'Apply for e-commerce services'
+  },
+  {
+    value: 'onboarding_officer',
+    label: 'Onboarding Officer',
+    icon: ClipboardCheck,
+    description: 'Review merchant applications'
+  },
+  {
+    value: 'compliance_officer',
+    label: 'Compliance Officer',
+    icon: Shield,
+    description: 'Perform compliance reviews'
+  },
+  {
+    value: 'admin',
+    label: 'Administrator',
+    icon: Settings,
+    description: 'Full system access'
+  },
+];
 
 const Auth: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -27,6 +59,7 @@ const Auth: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('merchant');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -49,7 +82,7 @@ const Auth: React.FC = () => {
       if (result.success) {
         toast({
           title: 'Welcome back!',
-          description: 'You have successfully signed in.',
+          description: `You have successfully signed in as ${selectedRole.replace('_', ' ')}.`,
         });
         navigate('/dashboard');
       } else {
@@ -60,8 +93,21 @@ const Auth: React.FC = () => {
         setError('Please enter your name');
         return;
       }
-      // Only merchants can self-register. Staff accounts are created by the admin.
-      const result = await register(email, password, name, 'merchant');
+
+      // Enforce merchant registration for security as previously requested
+      // even if other roles are selectable in the UI
+      const registerRole: UserRole = selectedRole === 'merchant' ? 'merchant' : 'merchant';
+
+      if (selectedRole !== 'merchant') {
+        toast({
+          title: 'Restricted Access',
+          description: 'Staff and Admin accounts must be created by an existing Administrator.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const result = await register(email, password, name, registerRole);
       if (result.success) {
         toast({
           title: 'Account created!',
@@ -128,12 +174,42 @@ const Auth: React.FC = () => {
               </CardTitle>
               <CardDescription>
                 {mode === 'login'
-                  ? 'Enter your credentials to access your account'
+                  ? 'Identify your role and enter credentials to sign in'
                   : 'Create your merchant account to get started'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2 mb-4">
+                  <Label>I am a...</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {roleOptions.map((role) => {
+                      const Icon = role.icon;
+                      const isSelected = selectedRole === role.value;
+                      return (
+                        <button
+                          key={role.value}
+                          type="button"
+                          onClick={() => setSelectedRole(role.value)}
+                          className={cn(
+                            'flex flex-col items-start p-3 rounded-lg border-2 transition-all text-left',
+                            isSelected
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/50'
+                          )}
+                        >
+                          <Icon size={18} className={cn(
+                            'mb-1',
+                            isSelected ? 'text-primary' : 'text-muted-foreground'
+                          )} />
+                          <span className="text-sm font-medium">{role.label}</span>
+                          <span className="text-[10px] text-muted-foreground line-clamp-1">{role.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {mode === 'register' && (
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
@@ -197,7 +273,7 @@ const Auth: React.FC = () => {
                   size="lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Merchant Account'}
+                  {isLoading ? 'Please wait...' : mode === 'login' ? `Sign In as ${roleLabels[selectedRole] || 'User'}` : 'Create Merchant Account'}
                 </Button>
               </form>
 
@@ -219,6 +295,13 @@ const Auth: React.FC = () => {
       </div>
     </div>
   );
+};
+
+const roleLabels: Record<string, string> = {
+  merchant: 'Merchant',
+  onboarding_officer: 'Onboarding Officer',
+  compliance_officer: 'Compliance Officer',
+  admin: 'Administrator',
 };
 
 export default Auth;
