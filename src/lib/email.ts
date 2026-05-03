@@ -52,9 +52,12 @@ export const sendEmail = async (templateParams: Record<string, any>) => {
 export const sendApplicationStatusEmail = async (
   email: string,
   businessName: string,
-  status: 'approved' | 'rejected' | 'additional_documents_requested'
+  status: string
 ) => {
   const statusLabels: Record<string, string> = {
+    submitted: 'Submitted',
+    under_review: 'Under Review',
+    compliance_review: 'Compliance Review',
     approved: 'Approved',
     rejected: 'Declined',
     additional_documents_requested: 'Additional Information Required',
@@ -66,23 +69,44 @@ export const sendApplicationStatusEmail = async (
     timeStyle: 'short'
   });
 
+  let message = '';
+  switch (status) {
+    case 'submitted':
+      message = `We have received your application for ${businessName}. Our team will begin the review process shortly.`;
+      break;
+    case 'under_review':
+      message = `Your application for ${businessName} is now under review by our onboarding team.`;
+      break;
+    case 'compliance_review':
+      message = `Your application for ${businessName} has passed initial review and is now in compliance review.`;
+      break;
+    case 'approved':
+      message = `Congratulations! Your application for ${businessName} has been Approved. You can now start using our services.`;
+      break;
+    case 'rejected':
+      message = `After careful review, we regret to inform you that your application for ${businessName} has been Declined.`;
+      break;
+    case 'additional_documents_requested':
+      message = `Our review team requires additional documentation to proceed with your application for ${businessName}. Please log in to your dashboard to see the details.`;
+      break;
+    default:
+      message = `Your application status for ${businessName} has been updated to ${status}.`;
+  }
+
   // Map these variables to your EmailJS Template
   const templateParams = {
     to_email: email,
     business_name: businessName,
     merchant_name: businessName, // Fallback for name
-    status: statusLabels[status],
+    status: statusLabels[status] || status,
     dashboard_url: dashboardUrl,
     time: currentTime,
-    message: status === 'approved'
-      ? 'We are pleased to inform you that your application has been Approved.'
-      : status === 'rejected'
-        ? 'After careful review, we regret to inform you that your application has been Declined.'
-        : 'Our review team requires additional documentation to proceed with your application.',
+    message: message,
   };
 
   return sendEmail(templateParams);
 };
+
 
 /**
  * Sends login credentials to a newly created staff member

@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Tables } from '@/integrations/supabase/types';
 import { sendApplicationStatusEmail } from '@/lib/email';
+import { sendApplicationStatusSMS } from '@/lib/sms';
+
 
 export type Application = Tables<'applications'>;
 export type ApplicationStatus = Application['status'];
@@ -176,6 +178,36 @@ export const useSubmitApplication = () => {
         .single();
 
       if (error) throw error;
+
+      // Trigger notifications for submission
+      const emailPromise = sendApplicationStatusEmail(data.contact_email, data.business_name, 'submitted');
+      const smsPromise = sendApplicationStatusSMS(data.contact_phone, data.business_name, 'submitted');
+      
+      // Also create an in-app notification
+      const notificationPromise = supabase.from('notifications').insert({
+        user_id: data.user_id,
+        title: 'Application Submitted',
+        message: `Your application for ${data.business_name} has been successfully submitted and is under review.`,
+        type: 'info'
+      });
+      
+      Promise.allSettled([emailPromise, smsPromise, notificationPromise]).then((results) => {
+        results.forEach((result, index) => {
+          const names = ['Email', 'SMS', 'In-App'];
+          const type = names[index];
+          if (result.status === 'fulfilled') {
+            const val = result.value as any;
+            if (!val.error) {
+              console.log(`DEBUG: Submission ${type} notification sent successfully!`);
+            } else {
+              console.error(`DEBUG: Submission ${type} notification failed:`, val.error);
+            }
+          } else {
+            console.error(`DEBUG: Unexpected error in submission ${type} trigger:`, result.reason);
+          }
+        });
+      });
+
       return data;
     },
     onSuccess: (data) => {
@@ -214,24 +246,40 @@ export const useUpdateApplicationStatus = () => {
       if (error) throw error;
 
       console.log('DEBUG: Application status updated successfully to:', status);
-      console.log('DEBUG: Application data for email:', { email: data.contact_email, business: data.business_name });
-
-      // Send email notification for specific status changes
-      if (status === 'approved' || status === 'rejected' || status === 'additional_documents_requested') {
-        console.log('DEBUG: Triggering email notification...');
-        // We don't await here to not block the UI, but we log the attempt
-        sendApplicationStatusEmail(data.contact_email, data.business_name, status)
-          .then(result => {
-            if (!result.success) {
-              console.error('DEBUG: Failed to send status email:', result.error);
+      
+      // Trigger multi-channel notifications
+      // In a real app, these would ideally be triggered by a backend edge function
+      // but we implement them here for immediate effect as per current project pattern.
+      
+      // Trigger multi-channel notifications
+      const emailPromise = sendApplicationStatusEmail(data.contact_email, data.business_name, status);
+      const smsPromise = sendApplicationStatusSMS(data.contact_phone, data.business_name, status);
+      
+      // Also create an in-app notification
+      const notificationPromise = supabase.from('notifications').insert({
+        user_id: data.user_id,
+        title: 'Application Update',
+        message: `Your application for ${data.business_name} is now ${status.replace('_', ' ')}.`,
+        type: status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'info'
+      });
+      
+      // Handle notification results
+      Promise.allSettled([emailPromise, smsPromise, notificationPromise]).then((results) => {
+        results.forEach((result, index) => {
+          const names = ['Email', 'SMS', 'In-App'];
+          const type = names[index];
+          if (result.status === 'fulfilled') {
+            const val = result.value as any;
+            if (!val.error) {
+              console.log(`DEBUG: ${type} notification sent successfully!`);
             } else {
-              console.log('DEBUG: Email sent successfully!');
+              console.error(`DEBUG: ${type} notification failed:`, val.error);
             }
-          })
-          .catch(err => {
-            console.error('DEBUG: Unexpected error in email trigger:', err);
-          });
-      }
+          } else {
+            console.error(`DEBUG: Unexpected error in ${type} trigger:`, result.reason);
+          }
+        });
+      });
 
       return data;
     },
