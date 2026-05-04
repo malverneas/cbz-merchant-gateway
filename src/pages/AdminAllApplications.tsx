@@ -15,10 +15,12 @@ import {
     Clock,
     XCircle,
     AlertTriangle,
-    Building2
+    Building2,
+    Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ApplicationStatus } from '@/lib/types';
+import { exportToExcel } from '@/lib/export';
 
 const statusFilters: { value: ApplicationStatus | 'all'; label: string; icon: React.ElementType }[] = [
     { value: 'all', label: 'All', icon: FileText },
@@ -47,13 +49,41 @@ const AdminAllApplications: React.FC = () => {
         return matchesSearch && matchesStatus;
     }) || [];
 
+    const handleExport = () => {
+        if (!filteredApplications.length) return;
+        
+        const exportData = filteredApplications.map(app => ({
+            'Business Name': app.business_name,
+            'Contact Name': app.contact_name,
+            'Email': app.contact_email,
+            'Phone': app.contact_phone,
+            'Status': app.status.replace('_', ' ').toUpperCase(),
+            'Created At': new Date(app.created_at).toLocaleDateString(),
+            'Business Type': app.business_type,
+            'Industry': app.industry
+        }));
+        
+        exportToExcel(exportData, `Merchant_Applications_${new Date().toISOString().split('T')[0]}`);
+    };
+
     return (
         <DashboardLayout allowedRoles={['admin']}>
             <div className="space-y-6">
                 {/* Header */}
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">All Applications</h1>
-                    <p className="text-muted-foreground">View and manage all merchant applications</p>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-bold text-foreground">All Applications</h1>
+                        <p className="text-muted-foreground">View and manage all merchant applications</p>
+                    </div>
+                    <Button 
+                        variant="outline" 
+                        onClick={handleExport}
+                        disabled={filteredApplications.length === 0}
+                        className="flex items-center gap-2"
+                    >
+                        <Download size={18} />
+                        Export to Excel
+                    </Button>
                 </div>
 
                 {/* Stats */}

@@ -20,11 +20,13 @@ import {
     ClipboardCheck,
     Building2,
     Settings,
-    Loader2
+    Loader2,
+    Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/lib/types';
 import { useQueryClient } from '@tanstack/react-query';
+import { exportToExcel } from '@/lib/export';
 
 const staffRoles: { value: UserRole; label: string; icon: React.ElementType; description: string }[] = [
     {
@@ -145,6 +147,19 @@ const AdminUserManagement: React.FC = () => {
         }
     };
 
+    const handleExport = () => {
+        if (!users || !users.length) return;
+        
+        const exportData = users.map(u => ({
+            'Name': u.name || 'Unnamed',
+            'Email': u.email,
+            'Role': roleLabels[u.role] || u.role,
+            'User ID': u.user_id
+        }));
+        
+        exportToExcel(exportData, `System_Users_${new Date().toISOString().split('T')[0]}`);
+    };
+
     return (
         <DashboardLayout allowedRoles={['admin']}>
             <div className="space-y-6">
@@ -154,13 +169,24 @@ const AdminUserManagement: React.FC = () => {
                         <h1 className="text-2xl font-bold text-foreground">User Management</h1>
                         <p className="text-muted-foreground">Manage system users and create staff accounts</p>
                     </div>
-                    <Button
-                        variant="hero"
-                        onClick={() => setShowCreateForm(!showCreateForm)}
-                    >
-                        <UserPlus size={18} className="mr-2" />
-                        {showCreateForm ? 'Cancel' : 'Create Staff Account'}
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={handleExport}
+                            disabled={!users || users.length === 0}
+                            className="flex items-center gap-2"
+                        >
+                            <Download size={18} />
+                            Export Users
+                        </Button>
+                        <Button
+                            variant="hero"
+                            onClick={() => setShowCreateForm(!showCreateForm)}
+                        >
+                            <UserPlus size={18} className="mr-2" />
+                            {showCreateForm ? 'Cancel' : 'Create Staff Account'}
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Create User Form */}
